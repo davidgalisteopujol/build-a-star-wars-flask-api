@@ -8,8 +8,7 @@ from flask_swagger import swagger
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
-from models import db, User,Planet,People,Favorites_people,Favorites_planets
-
+from models import db, User,Planet,People, fav_characters, fav_planets
 
 
 app = Flask(__name__)
@@ -38,6 +37,7 @@ def sitemap():
     return generate_sitemap(app)
 
 
+#Get all the users
 @app.route('/users', methods=['GET'])
 def handle_hello():
     all_users = User.query.all()
@@ -45,7 +45,6 @@ def handle_hello():
     response_body = all_users
     return jsonify(response_body),200
    
-
 
 # Metodos para People
 @app.route('/people', methods=['GET', 'POST'])
@@ -71,12 +70,14 @@ def handle_people():
         response_body = all_people
         return jsonify(response_body),200
 
-
+#Detailed People
 @app.route('/people/<int:id>', methods=['GET','PUT','DELETE'])
 def handle_detailed_people(id):
     if request.method == 'GET':
-        character = People.query.get(id)
-        return jsonify(character.serialize_people()), 200
+        character = People.query.filter_by(id = id)
+        character = list(map(lambda x: x.serialize_people(),character))
+        response_body = character
+        return jsonify(response_body),200
     
     if request.method == 'PUT':
         body = request.get_json()
@@ -120,6 +121,7 @@ def handle_planet():
         return jsonify(response_body),200
 
 
+#Detailed Planet
 @app.route('/planet/<int:id>',methods=['GET','PUT','DELETE'])
 def handle_detailed_planet(id):
     if request.method == 'GET':
@@ -136,50 +138,33 @@ def handle_detailed_planet(id):
         return jsonify(detailed_planet.serialize_planet()), 200
 
     if request.method == 'DELETE':
-        favorite_planet = Favorites_planets.query.filter_by(planet_id =id)
-        favorite_planet = list(map(lambda x: x.serialize_favorites_planets(), favorite_planet))
-        # favorite_planet.planet_id = id
-        # favorite_planet = Favorites_planets.query.filter_by(planet_id =id)
-        # favorite_planet = list(map(lambda x: x.serialize_favorites_planets(), favorite_planet))
-        # favorite_planet = favorite_planet.planet_id
-        db.session.delete(favorite_planet)
-        db.session.commit()
         planet = Planet.query.get(id)
         db.session.delete(planet)
-        # planet = Planet.query.get(id)
-        # db.session.delete(planet)
-        # # favorite_planet = Favorites_planets.query.filter(Favorites_planets.planet_id ==id)
-        # # favorite_planet = list(map(lambda x: x.serialize_favorites_planets(), favorite_planet))
-        # # db.session.delete(planet,favorite_planet[id])
         db.session.commit()
         return jsonify({"message":"planet deleted"}),200
 
 
 
-#Favorites
-@app.route('/users/favorites')
-def handle_favorites():
-    all_favorites = []
+#User Favorites
+@app.route('/users/<int:user_id>/favorites')
+def handle_favorites(user_id):
+    user = User.query.get(user_id)
 
-    all_favorites_people = Favorites_people.query.all()
-    all_favorites_people = list(map(lambda x: x.serialize_favorites_people(), all_favorites_people))
-    all_favorites.append(all_favorites_people)
+    favorites_characters = user.fav_characters
+    favorites_characters = list(map(lambda x: x.serialize_people(), favorites_characters))
 
-    all_favorites_planets = Favorites_planets.query.all()
-    all_favorites_planets = list(map(lambda x: x.serialize_favorites_planets(), all_favorites_planets))
-    all_favorites.append(all_favorites_planets)
+    favorites_planets = user.fav_planets
+    favorites_planets = list(map(lambda x: x.serialize_planet(), favorites_planets))
 
-    return jsonify(all_favorites),200
+    return jsonify(favorites_characters,favorites_planets),200
 
-    
-    
-@app.route('/user/<int:user_id>/favorite/people/<int:people_id>', methods=['POST'])
+
+#Post favorite people in a user
+@app.route('/user/<int:user_id>/favorites/people/<int:people_id>', methods=['POST'])
 def handle_people_favorites(user_id,people_id):
-    favorite_people = Favorites_people(
-        user_id = user_id,
-        character_id = people_id
-    )
-    db.session.add(favorite_people)
+    user = User.query.get(user_id)
+    people = People.query.get(people_id)
+    user.fav_characters.append(people)
     db.session.commit()
 
     response_body = {
@@ -188,20 +173,18 @@ def handle_people_favorites(user_id,people_id):
     return jsonify(response_body), 200
 
 
-@app.route('/user/<int:user_id>/favorite/planet/<int:planet_id>', methods=['POST'])
+#Post favorite planet in a user
+@app.route('/user/<int:user_id>/favorites/planet/<int:planet_id>', methods=['POST'])
 def handle_planet_favorites(user_id,planet_id):
-    favorite_planet = Favorites_planets(
-        user_id = user_id,
-        planet_id = planet_id
-    )
-    db.session.add(favorite_planet)
+    user = User.query.get(user_id)
+    planet = Planet.query.get(planet_id)
+    user.fav_planets.append(planet)
     db.session.commit()
 
     response_body = {
     "msg": "Hello, POST send"
     }
     return jsonify(response_body), 200
-
 
 
 

@@ -9,7 +9,8 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(80), unique=False, nullable=False)
     is_active = db.Column(db.Boolean(), unique=False, nullable=False)
-
+    fav_characters = db.relationship('People', secondary='fav_characters', lazy='subquery', backref=db.backref('user', lazy=True))
+    fav_planets = db.relationship('Planet', secondary='fav_planets', lazy='subquery', backref=db.backref('user', lazy=True))
 
     def __repr__(self):
         return '<User %r>' % self.username
@@ -19,6 +20,8 @@ class User(db.Model):
             "id": self.id,
             "name":self.name,
             "email": self.email,
+            # "fav_characters": self.fav_characters,
+            # "fav_planets": self.fav_planets
             # do not serialize the password, its a security breach
         }
 
@@ -66,52 +69,15 @@ class Planet(db.Model):
             "diameter": self.diameter
         }
 
-# class Favorites(db.Model):
-#     __tablename__ = "favorites"
-#     id = db.Column(db.Integer, primary_key = True)
-#     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-#     user = db.relationship("User")
-#     character_id = db.Column(db.Integer, db.ForeignKey("people.id"))
-#     character = db.relationship("People")
-#     planet_id = db.Column(db.Integer, db.ForeignKey("planet.id"))
-#     planet = db.relationship("Planet")
 
-#     def serialize_favorites(self):
-#          return {
-#             "id": self.id,
-#             "user_id": self.user_id,
-#             "character_id": self.character_id,
-#             "planet_id": self.planet_id,
-#         }
+fav_characters = db.Table('fav_characters',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('people_id', db.Integer, db.ForeignKey('people.id'), primary_key=True)
+)
 
-class Favorites_people(db.Model):
-    __tablename__ = "favorites_people"
-    id = db.Column(db.Integer, primary_key = True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-    user = db.relationship("User")
-    character_id = db.Column(db.Integer, db.ForeignKey("people.id"))
-    character = db.relationship("People")
-    
-
-    def serialize_favorites_people(self):
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "character_id": self.character_id
-        }
+fav_planets = db.Table('fav_planets',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('planet_id', db.Integer, db.ForeignKey('planet.id'), primary_key=True)
+)
 
 
-class Favorites_planets(db.Model):
-    __tablename__ = "favorites_planets"
-    id = db.Column(db.Integer, primary_key = True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-    user = db.relationship("User")
-    planet_id = db.Column(db.Integer, db.ForeignKey("planet.id"))
-    planet = db.relationship("Planet")
-
-    def serialize_favorites_planets(self):
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "planet_id": self.planet_id
-        }
