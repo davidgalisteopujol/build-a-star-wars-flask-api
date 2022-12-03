@@ -20,8 +20,6 @@ class User(db.Model):
             "id": self.id,
             "name":self.name,
             "email": self.email,
-            # "fav_characters": self.fav_characters,
-            # "fav_planets": self.fav_planets
             # do not serialize the password, its a security breach
         }
 
